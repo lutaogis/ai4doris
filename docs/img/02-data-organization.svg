@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="368" viewBox="0 0 680 368" role="img">
+  <title>Doris 数据组织五层结构</title>
+  <desc>从 Table 到 Segment 共五层：Table 定义模型，Partition 管数据生命周期，Tablet 是副本单位，Rowset 是一次导入的版本，Segment 是列存文件。</desc>
+  <style>
+    text { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif; }
+  </style>
+  <rect x="0" y="0" width="680" height="368" fill="#ffffff"/>
+
+  <rect x="40" y="40" width="560" height="48" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="56" y="64" dominant-baseline="central" font-size="13" fill="#042C53" font-weight="500">Table</text>
+  <text x="170" y="64" dominant-baseline="central" font-size="12" fill="#0C447C">逻辑表，定义数据模型 Duplicate / Unique / Aggregate</text>
+
+  <rect x="40" y="100" width="560" height="48" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="56" y="124" dominant-baseline="central" font-size="13" fill="#042C53" font-weight="500">Partition</text>
+  <text x="170" y="124" dominant-baseline="central" font-size="12" fill="#0C447C">数据管理最小单位，按天或范围切分，可整分区删除</text>
+
+  <rect x="40" y="160" width="560" height="48" rx="8" fill="#B5D4F4" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="56" y="184" dominant-baseline="central" font-size="13" fill="#042C53" font-weight="500">Tablet</text>
+  <text x="170" y="184" dominant-baseline="central" font-size="12" fill="#0C447C">副本单位 = 分区 × 分桶，复制、迁移、均衡都按它做</text>
+
+  <rect x="40" y="220" width="560" height="48" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="56" y="244" dominant-baseline="central" font-size="13" fill="#04342C" font-weight="500">Rowset</text>
+  <text x="170" y="244" dominant-baseline="central" font-size="12" fill="#0F6E56">一次导入生成一个版本，只追加不改写，LSM 式管理</text>
+
+  <rect x="40" y="280" width="560" height="48" rx="8" fill="#9FE1CB" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="56" y="304" dominant-baseline="central" font-size="13" fill="#04342C" font-weight="500">Segment</text>
+  <text x="170" y="304" dominant-baseline="central" font-size="12" fill="#085041">列存文件：逐列编码压缩 + 前缀索引 / ZoneMap / 倒排</text>
+
+  <text x="40" y="348" font-size="12" fill="#888780">Compaction 把多个小 Rowset 逐层合并成大 Rowset，控制读放大：Cumulative 层合并到 Base 层</text>
+</svg>

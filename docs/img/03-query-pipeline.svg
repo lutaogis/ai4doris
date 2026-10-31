@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="368" viewBox="0 0 680 368" role="img">
+  <title>Doris 查询执行四阶段</title>
+  <desc>SQL 依次经过解析与语义分析、Nereids 优化器、生成分布式计划、BE 并行执行四个阶段，前三步在 FE，最后一步在 BE。</desc>
+  <style>
+    text { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="680" height="368" fill="#ffffff"/>
+
+  <circle cx="72" cy="68" r="12" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="72" y="68" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#0C447C" font-weight="500">1</text>
+  <rect x="96" y="40" width="380" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="112" y="68" dominant-baseline="central" font-size="13" fill="#042C53" font-weight="500">解析与语义分析</text>
+  <text x="500" y="68" dominant-baseline="central" font-size="12" fill="#5F5E5A">SQL 到 AST 到 Logical Plan</text>
+
+  <line x1="286" y1="96" x2="286" y2="120" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <circle cx="72" cy="152" r="12" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="72" y="152" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#0C447C" font-weight="500">2</text>
+  <rect x="96" y="124" width="380" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="112" y="152" dominant-baseline="central" font-size="13" fill="#042C53" font-weight="500">Nereids 优化器</text>
+  <text x="500" y="152" dominant-baseline="central" font-size="12" fill="#5F5E5A">规则改写加代价估算</text>
+
+  <line x1="286" y1="180" x2="286" y2="204" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <circle cx="72" cy="236" r="12" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="72" y="236" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#0C447C" font-weight="500">3</text>
+  <rect x="96" y="208" width="380" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="112" y="236" dominant-baseline="central" font-size="13" fill="#042C53" font-weight="500">生成分布式计划</text>
+  <text x="500" y="236" dominant-baseline="central" font-size="12" fill="#5F5E5A">按 Tablet 切 PlanFragment</text>
+
+  <line x1="286" y1="264" x2="286" y2="288" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <circle cx="72" cy="320" r="12" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="72" y="320" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#04342C" font-weight="500">4</text>
+  <rect x="96" y="292" width="380" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="112" y="320" dominant-baseline="central" font-size="13" fill="#04342C" font-weight="500">BE 并行执行</text>
+  <text x="500" y="320" dominant-baseline="central" font-size="12" fill="#0F6E56">向量化算子加 Exchange</text>
+</svg>

@@ -1,0 +1,21 @@
+[Unit]
+Description=Apache Doris Backend (BE)
+Documentation=https://doris.apache.org
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=doris
+Group=doris
+ExecStart=/opt/doris/be/bin/start_be.sh --daemon
+ExecStop=/opt/doris/be/bin/stop_be.sh
+LimitNOFILE=655360
+LimitNPROC=655360
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=180
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target
