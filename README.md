@@ -9,6 +9,8 @@
 
 **巡检报告**：[docs/doris-inspection-report-20261101.md](docs/doris-inspection-report-20261101.md)（2026-11-01 首次巡检，75/100，5 项待优化）
 
+**ETL 入仓指南**：[docs/etl-guide.md](docs/etl-guide.md)（导入方式选型、四层建模、十条原则、参数红线、故障速查）+ 可直接跑的模板 [etl/README.md](etl/README.md)
+
 ## 1. 规格与容量
 
 | 角色 | 主机 | vCPU | 内存 | 系统盘 | 数据盘 |
