@@ -8,14 +8,19 @@ Wants=network-online.target
 Type=forking
 User=doris
 Group=doris
+PIDFile=/opt/doris/be/bin/be.pid
+Environment=JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+Environment=DORIS_HOME=/opt/doris/be
 ExecStart=/opt/doris/be/bin/start_be.sh --daemon
-ExecStop=/opt/doris/be/bin/stop_be.sh
-LimitNOFILE=655360
-LimitNPROC=655360
+ExecStop=/opt/doris/be/bin/stop_be.sh --grace
+KillSignal=SIGTERM
+SendSIGKILL=yes
+TimeoutStartSec=180
+TimeoutStopSec=180
 Restart=on-failure
 RestartSec=15
-TimeoutStartSec=180
-TimeoutStopSec=120
+LimitNOFILE=655360
+LimitNPROC=655360
 
 [Install]
 WantedBy=multi-user.target

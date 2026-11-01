@@ -11,6 +11,8 @@
 
 **ETL 入仓指南**：[docs/etl-guide.md](docs/etl-guide.md)（导入方式选型、四层建模、十条原则、参数红线、故障速查）+ 可直接跑的模板 [etl/README.md](etl/README.md)
 
+**关机 / 开机手册**：[docs/doris-shutdown-guide.md](docs/doris-shutdown-guide.md)（六个坑、时间轴执行计划、校验清单、故障处置）
+
 ## 1. 规格与容量
 
 | 角色 | 主机 | vCPU | 内存 | 系统盘 | 数据盘 |
@@ -50,8 +52,11 @@ ai4doris/
 │   ├── 03-register.sh         注册 FOLLOWER / BACKEND（仅 node-01）
 │   ├── 04-start-be.sh         启动 BE（node-04/05/06）
 │   ├── 05-verify.sh           验收检查（--smoke 冒烟建表写入）
-│   ├── systemd/               开机自启单元（doris-fe / doris-be）
-│   └── 06-inspect.sh          巡检，输出 Markdown 报告（见 3.1）
+│   ├── systemd/               开机自启单元（doris-fe / doris-be，ExecStop 带 --grace）
+│   ├── 06-inspect.sh          巡检，输出 Markdown 报告（见 3.1）
+│   ├── 07-stop-cluster.sh     停机：体检 + 元数据冷备 + 顺序优雅停止（见 3.2）
+│   └── 08-start-cluster.sh    开机：FE→BE 顺序启动 + 等就绪（见 3.2）
+├── backup/                    meta 冷备落地目录（07 脚本自动生成）
 └── sql/01-init.sql            建库 + 良率示例表（3 分桶）
 ```
 
@@ -174,6 +179,26 @@ echo $?                                          # 0=全绿 1=有WARN 2=有CRIT
 # 每日 08:00 巡检并留档
 0 8 * * * cd /opt/ai4doris && bash scripts/06-inspect.sh -q -o /opt/backup/inspect-$(date +\%Y\%m\%d).md
 ```
+
+### 关机与开机（07 / 08）
+
+在 node-01（或能 ssh 六台的管理机）执行，自动按正确顺序停止 / 启动：
+
+```bash
+cd /opt/ai4doris/scripts
+./07-stop-cluster.sh --dry-run          # 演练：体检 + 元数据冷备，不停进程
+./07-stop-cluster.sh --yes              # 优雅停机（BE → FE Follower → FE Master）
+./07-stop-cluster.sh --yes --poweroff   # 停机后逐台关机
+./08-start-cluster.sh                   # 开机（FE Master → FE Follower → BE，等就绪）
+```
+
+三条硬规则：
+
+1. `stop_be.sh` / `stop_fe.sh` 默认 `kill -9`，**必须加 `--grace`**（unit 已修正为带 `--grace`）
+2. 关机顺序 `BE → FE`，开机顺序 `FE → BE`
+3. 本集群 FE 至今无 checkpoint image，**关机前必须冷备 `fe/meta`**（脚本自动做）
+
+完整时间轴、校验清单、故障处置见 [docs/doris-shutdown-guide.md](docs/doris-shutdown-guide.md)。
 
 ## 7. 已知瓶颈与扩容路径
 
