@@ -7,6 +7,8 @@
 
 **架构原理文档**：[docs/doris-architecture.md](docs/doris-architecture.md)（分层架构、FE/BE 内部机制、数据组织、查询链路、存算分离对比、常见误区）
 
+**巡检报告**：[docs/doris-inspection-report-20261101.md](docs/doris-inspection-report-20261101.md)（2026-11-01 首次巡检，75/100，5 项待优化）
+
 ## 1. 规格与容量
 
 | 角色 | 主机 | vCPU | 内存 | 系统盘 | 数据盘 |
@@ -45,7 +47,9 @@ ai4doris/
 │   ├── 02-start-fe.sh         启动 FE（首节点 / --follower）
 │   ├── 03-register.sh         注册 FOLLOWER / BACKEND（仅 node-01）
 │   ├── 04-start-be.sh         启动 BE（node-04/05/06）
-│   └── 05-verify.sh           验收巡检（--smoke 冒烟）
+│   ├── 05-verify.sh           验收检查（--smoke 冒烟建表写入）
+│   ├── systemd/               开机自启单元（doris-fe / doris-be）
+│   └── 06-inspect.sh          巡检，输出 Markdown 报告（见 3.1）
 └── sql/01-init.sql            建库 + 良率示例表（3 分桶）
 ```
 
@@ -92,10 +96,9 @@ su - doris -c '~/ai4doris/scripts/04-start-be.sh'              # 04、05、06
 
 | 参数 | 值 | 原因 |
 |---|---|---|
-| `JAVA_OPTS` | `-Xmx4g -Xms4g` | 8G 机器留 4G 给 OS、页缓存、BDBJE；堆开满会导致系统 OOM Killer 杀进程 |
+| `JAVA_OPTS_FOR_JDK_17` | `-Xmx4g -Xms4g` | 8G 机器留 4G 给 OS、页缓存、BDBJE；堆开满会导致系统 OOM Killer 杀进程。**4.x 只认 `_FOR_JDK_17` 后缀这个键** |
 | `sys_log_roll_num` | 10 | 系统盘只有 100G，日志必须限制滚动份数 |
-| `streaming_load_max_mb` | 2048 | 单批导入不要超过 BE 可用内存，否则导入必失败 |
-| `max_query_concurrency` | 32 | 4C 机器并发高了 CPU 打满，反而全慢 |
+| Workload Group `normal.max_concurrency` | 32 | 4C 机器并发高了 CPU 打满，反而全慢。**4.x 已删除 `max_query_concurrency`，改由 Workload Group 控制** |
 
 > 4G 堆大约支撑 **30~50 万 tablet**。按本集群数据量估算 tablet 在几万级，够用；后续表数量上千要优先扩 FE 内存。
 
@@ -106,10 +109,15 @@ su - doris -c '~/ai4doris/scripts/04-start-be.sh'              # 04、05、06
 | `mem_limit` | `80%` | 16G 必须硬顶，否则 BE 吃满整机内存被 OOM |
 | `storage_page_cache_limit` | `20%` | 页缓存压缩到 2.5G，把内存让给 memtable 和 compaction |
 | `write_buffer_size` | `100M` | 默认 200M，多 tablet 并发写入时会瞬间吃掉几个 G |
-| `compaction_max_memory_limit_percent` | 40 | compaction 是内存大户，必须封顶 |
+| `compaction_memory_bytes_limit` | `6442450944`（6G） | compaction 是内存大户，必须封顶。**4.x 用字节值，没有 `_percent` 版本，默认仅 1G** |
 | `load_process_max_memory_limit_percent` | 30 | 默认 90%，两三个并发导入就崩 |
+| `streaming_load_max_mb` | 2048 | 单批导入不要超过 BE 可用内存。**该参数在 BE 侧，不在 FE** |
 | `max_compaction_concurrency` | 4 | 8C 机器，并发太高会和查询抢 CPU |
 | `storage_high_watermark_usage_percent` | 85 | 200G 小盘，到 85% 就拒绝写入，提前告警 |
+
+> ⚠️ **Doris 对不认识的 conf 键静默忽略**，不报错也不阻断启动。改完配置必须用
+> `ADMIN SHOW FRONTEND CONFIG` / `ADMIN SHOW BACKEND CONFIG` 核对运行时值，
+> 否则会出现"配了但没生效"（本项目部署时就踩过，见巡检报告「配置基线校准」）。
 
 ## 5. 建表规范
 
@@ -141,6 +149,29 @@ mysql -h192.168.1.51 -P9030 -uroot -e "BACKUP SNAPSHOT demo.snap_$(date +%F) TO 
 | 1 台 BE 挂 | 查询正常、写入降级（2 副本） | 重启 BE，副本自动补齐，无需干预 |
 | 1 台 FE 挂 | 集群正常（2/3 法定人数） | 重启该 FE，自动追日志 |
 | 2 台同时挂 | **集群不可用** | 禁止同机柜/同 UPS 回路批量维护 |
+
+### 巡检（06-inspect.sh）
+
+在任一 FE 节点执行，自动采集并输出 Markdown 报告：
+
+```bash
+cd /opt/ai4doris
+bash scripts/06-inspect.sh                      # 打印到终端
+bash scripts/06-inspect.sh -o /tmp/report.md    # 同时写文件
+bash scripts/06-inspect.sh -H 168               # 审计窗口改为近 7 天
+bash scripts/06-inspect.sh -q                   # 只输出一行摘要（适合 cron）
+echo $?                                          # 0=全绿 1=有WARN 2=有CRIT
+```
+
+覆盖 9 个维度 28 项：FE 拓扑、BE 状态、副本完整性、容量磁盘、库表分区、导入任务、查询审计、主机基线、运行时配置。
+每项判定 OK/WARN/CRIT，CRIT 扣 15 分、WARN 扣 5 分（满分 100）。
+
+前置：node-01 需装 `sshpass`（用于采集六台主机指标），缺失时加 `--no-ssh` 跳过主机层。
+
+```bash
+# 每日 08:00 巡检并留档
+0 8 * * * cd /opt/ai4doris && bash scripts/06-inspect.sh -q -o /opt/backup/inspect-$(date +\%Y\%m\%d).md
+```
 
 ## 7. 已知瓶颈与扩容路径
 
